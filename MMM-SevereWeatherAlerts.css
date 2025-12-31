@@ -42,18 +42,22 @@
 
 .mmm-severe-weather-alerts .today-container {
     text-align: center;
-    padding: 15px 10px 20px;
     margin-bottom: 15px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(0, 0, 0, 0.25);
+    border-radius: 10px;
+    padding: 12px 15px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .mmm-severe-weather-alerts .today-location {
-    font-size: 1.1em;
-    font-weight: 400;
-    color: rgba(255, 255, 255, 0.7);
-    letter-spacing: 1px;
-    margin-bottom: 10px;
+    font-size: 0.8em;
     text-transform: uppercase;
+    letter-spacing: 2px;
+    color: rgba(255, 255, 255, 0.5);
+    margin-bottom: 12px;
+    text-align: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding-bottom: 8px;
 }
 
 .mmm-severe-weather-alerts .today-main {
@@ -371,7 +375,8 @@
    ======================================== */
 
 .mmm-severe-weather-alerts.compact .today-container {
-    padding: 10px 5px 15px;
+    margin-bottom: 10px;
+    padding: 10px;
 }
 
 .mmm-severe-weather-alerts.compact .today-icon {

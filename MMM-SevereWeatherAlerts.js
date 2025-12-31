@@ -97,7 +97,7 @@ Module.register("MMM-SevereWeatherAlerts", {
             const todayContainer = document.createElement("div");
             todayContainer.className = "today-container";
             
-            // Location header
+            // Location header (inside box, like forecast title)
             const locationHeader = document.createElement("div");
             locationHeader.className = "today-location";
             locationHeader.textContent = this.config.location;
