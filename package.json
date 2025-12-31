@@ -1,0 +1,30 @@
+{
+  "name": "mmm-severeweatheralerts",
+  "version": "1.0.0",
+  "description": "A MagicMirror² module that displays severe weather warnings and alerts with a 3-day forecast. Uses Met Office for UK locations and Open-Meteo for global coverage.",
+  "keywords": [
+    "MagicMirror",
+    "MagicMirror2",
+    "weather",
+    "alerts",
+    "warnings",
+    "severe weather",
+    "met office",
+    "forecast"
+  ],
+  "homepage": "https://github.com/syntosys-101/MMM-SevereWeatherAlerts#readme",
+  "bugs": {
+    "url": "https://github.com/syntosys-101/MMM-SevereWeatherAlerts/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/syntosys-101/MMM-SevereWeatherAlerts.git"
+  },
+  "license": "MIT",
+  "author": "syntosys-101",
+  "main": "MMM-SevereWeatherAlerts.js",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=18"
+  }
+}

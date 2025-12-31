@@ -1,0 +1,347 @@
+/* MMM-SevereWeatherAlerts Styles
+ * Emergency broadcast aesthetic - bold warnings, clean forecast
+ */
+
+.mmm-severe-weather-alerts {
+    font-family: 'Roboto Condensed', 'Arial Narrow', sans-serif;
+    color: #ffffff;
+    padding: 10px;
+    max-width: 400px;
+}
+
+.mmm-severe-weather-alerts.compact {
+    max-width: 280px;
+    font-size: 0.85em;
+}
+
+.mmm-severe-weather-alerts.rotated {
+    /* Adjustments for rotated displays */
+}
+
+/* Loading State */
+.mmm-severe-weather-alerts .loading {
+    color: #00ff00;
+    font-size: 1.1em;
+    padding: 20px;
+    text-align: center;
+}
+
+.mmm-severe-weather-alerts .loading .fa-spinner {
+    margin-right: 8px;
+}
+
+/* Error State */
+.mmm-severe-weather-alerts .error {
+    color: #ff6b6b;
+    padding: 15px;
+    text-align: center;
+    background: rgba(255, 0, 0, 0.1);
+    border-radius: 8px;
+    border-left: 4px solid #ff0000;
+}
+
+/* No Alerts State */
+.mmm-severe-weather-alerts .no-alerts {
+    color: #00ff00;
+    padding: 20px;
+    text-align: center;
+    font-size: 1.2em;
+    background: rgba(0, 255, 0, 0.05);
+    border-radius: 8px;
+    border: 1px solid rgba(0, 255, 0, 0.2);
+}
+
+.mmm-severe-weather-alerts .no-alerts .fa {
+    margin-right: 10px;
+    font-size: 1.3em;
+}
+
+/* Alerts Container */
+.mmm-severe-weather-alerts .alerts-container {
+    margin-bottom: 20px;
+}
+
+/* Individual Alert */
+.mmm-severe-weather-alerts .alert {
+    margin-bottom: 15px;
+    padding: 15px;
+    border-radius: 8px;
+    position: relative;
+    overflow: hidden;
+    animation: alertPulse 3s ease-in-out infinite;
+}
+
+/* Alert Severity Colors */
+.mmm-severe-weather-alerts .alert-red {
+    background: linear-gradient(135deg, rgba(180, 0, 0, 0.9) 0%, rgba(100, 0, 0, 0.85) 100%);
+    border-left: 5px solid #ff0000;
+    box-shadow: 0 0 20px rgba(255, 0, 0, 0.3), inset 0 0 30px rgba(255, 0, 0, 0.1);
+}
+
+.mmm-severe-weather-alerts .alert-amber {
+    background: linear-gradient(135deg, rgba(180, 100, 0, 0.9) 0%, rgba(120, 60, 0, 0.85) 100%);
+    border-left: 5px solid #ff8c00;
+    box-shadow: 0 0 15px rgba(255, 140, 0, 0.2), inset 0 0 30px rgba(255, 140, 0, 0.1);
+}
+
+.mmm-severe-weather-alerts .alert-yellow {
+    background: linear-gradient(135deg, rgba(180, 160, 0, 0.85) 0%, rgba(100, 90, 0, 0.8) 100%);
+    border-left: 5px solid #ffd700;
+    box-shadow: 0 0 15px rgba(255, 215, 0, 0.2), inset 0 0 30px rgba(255, 215, 0, 0.1);
+}
+
+/* Red alert pulse animation */
+.mmm-severe-weather-alerts .alert-red {
+    animation: alertPulseRed 2s ease-in-out infinite;
+}
+
+@keyframes alertPulseRed {
+    0%, 100% {
+        box-shadow: 0 0 20px rgba(255, 0, 0, 0.3), inset 0 0 30px rgba(255, 0, 0, 0.1);
+    }
+    50% {
+        box-shadow: 0 0 35px rgba(255, 0, 0, 0.5), inset 0 0 40px rgba(255, 0, 0, 0.2);
+    }
+}
+
+@keyframes alertPulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.92;
+    }
+}
+
+/* Alert Header */
+.mmm-severe-weather-alerts .alert-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+}
+
+.mmm-severe-weather-alerts .alert-header .fa {
+    font-size: 1.5em;
+    filter: drop-shadow(0 0 3px currentColor);
+}
+
+.mmm-severe-weather-alerts .alert-title {
+    font-size: 1.15em;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    flex: 1;
+}
+
+.mmm-severe-weather-alerts .alert-severity {
+    font-size: 0.75em;
+    font-weight: 600;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.3);
+    letter-spacing: 1px;
+}
+
+/* Alert Description */
+.mmm-severe-weather-alerts .alert-description {
+    font-size: 0.9em;
+    line-height: 1.4;
+    opacity: 0.95;
+    margin-bottom: 10px;
+    padding-left: 5px;
+    border-left: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+/* Alert Meta */
+.mmm-severe-weather-alerts .alert-meta {
+    font-size: 0.8em;
+    opacity: 0.8;
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+}
+
+.mmm-severe-weather-alerts .alert-meta .fa {
+    margin-right: 5px;
+}
+
+/* Forecast Container */
+.mmm-severe-weather-alerts .forecast-container {
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 10px;
+    padding: 15px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.mmm-severe-weather-alerts .forecast-title {
+    font-size: 0.9em;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: rgba(255, 255, 255, 0.6);
+    margin-bottom: 15px;
+    text-align: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 10px;
+}
+
+/* Forecast Grid */
+.mmm-severe-weather-alerts .forecast-grid {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+/* Individual Forecast Day */
+.mmm-severe-weather-alerts .forecast-day {
+    flex: 1;
+    text-align: center;
+    padding: 12px 8px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    border: 1px solid transparent;
+}
+
+.mmm-severe-weather-alerts .forecast-day:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.mmm-severe-weather-alerts .forecast-day.has-warning {
+    border-color: rgba(255, 140, 0, 0.5);
+    background: rgba(255, 140, 0, 0.1);
+}
+
+.mmm-severe-weather-alerts .forecast-day-name {
+    font-size: 0.85em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.mmm-severe-weather-alerts .forecast-icon {
+    font-size: 1.8em;
+    margin: 10px 0;
+    color: #00ff00;
+    filter: drop-shadow(0 0 5px rgba(0, 255, 0, 0.3));
+}
+
+.mmm-severe-weather-alerts .forecast-day.has-warning .forecast-icon {
+    color: #ff8c00;
+    filter: drop-shadow(0 0 5px rgba(255, 140, 0, 0.5));
+}
+
+.mmm-severe-weather-alerts .forecast-condition {
+    font-size: 0.75em;
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: 8px;
+    min-height: 2.2em;
+    line-height: 1.1;
+}
+
+.mmm-severe-weather-alerts .forecast-temps {
+    font-size: 0.9em;
+    margin-bottom: 5px;
+}
+
+.mmm-severe-weather-alerts .forecast-temps .temp-high {
+    color: #ff6b6b;
+    font-weight: 600;
+    margin-right: 8px;
+}
+
+.mmm-severe-weather-alerts .forecast-temps .temp-low {
+    color: #6bc5ff;
+    opacity: 0.8;
+}
+
+.mmm-severe-weather-alerts .forecast-precip {
+    font-size: 0.75em;
+    color: #6bc5ff;
+    opacity: 0.9;
+}
+
+.mmm-severe-weather-alerts .forecast-precip .fa {
+    margin-right: 3px;
+}
+
+/* Compact mode adjustments */
+.mmm-severe-weather-alerts.compact .alert {
+    padding: 10px;
+    margin-bottom: 10px;
+}
+
+.mmm-severe-weather-alerts.compact .alert-title {
+    font-size: 1em;
+}
+
+.mmm-severe-weather-alerts.compact .alert-description {
+    font-size: 0.8em;
+}
+
+.mmm-severe-weather-alerts.compact .forecast-grid {
+    flex-direction: column;
+    gap: 5px;
+}
+
+.mmm-severe-weather-alerts.compact .forecast-day {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    text-align: left;
+}
+
+.mmm-severe-weather-alerts.compact .forecast-icon {
+    font-size: 1.2em;
+    margin: 0 10px;
+}
+
+.mmm-severe-weather-alerts.compact .forecast-condition {
+    display: none;
+}
+
+/* Scrollbar styling */
+.mmm-severe-weather-alerts::-webkit-scrollbar {
+    width: 4px;
+}
+
+.mmm-severe-weather-alerts::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.mmm-severe-weather-alerts::-webkit-scrollbar-thumb {
+    background: rgba(0, 255, 0, 0.3);
+    border-radius: 2px;
+}
+
+/* Emergency stripes for red alerts */
+.mmm-severe-weather-alerts .alert-red::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: repeating-linear-gradient(
+        90deg,
+        #ff0000,
+        #ff0000 10px,
+        #000000 10px,
+        #000000 20px
+    );
+    animation: stripeMove 1s linear infinite;
+}
+
+@keyframes stripeMove {
+    0% {
+        background-position: 0 0;
+    }
+    100% {
+        background-position: 20px 0;
+    }
+}
