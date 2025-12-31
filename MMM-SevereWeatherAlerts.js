@@ -1,5 +1,5 @@
 /* MagicMirror² Module: MMM-SevereWeatherAlerts
- * Displays severe weather warnings with 3-day forecast
+ * Displays today's weather, severe warnings, and 3-day forecast
  * Uses Met Office for UK, Open-Meteo for other regions
  */
 
@@ -15,14 +15,14 @@ Module.register("MMM-SevereWeatherAlerts", {
         units: "metric",            // metric or imperial
         language: "en",
         rotated: false,             // Set true if display is rotated
-        alertSound: false,          // Play sound on new alert (requires additional setup)
+        alertSound: false,          // Play sound on new alert
         metOfficeApiKey: null,      // Optional: Met Office DataHub API key for UK
         showNoAlertsMessage: true,
         compactMode: false          // Smaller display for side panels
     },
 
     getStyles: function() {
-        return ["MMM-SevereWeatherAlerts.css", "font-awesome.css"];
+        return ["MMM-SevereWeatherAlerts.css", "weather-icons.css"];
     },
 
     getScripts: function() {
@@ -33,6 +33,7 @@ Module.register("MMM-SevereWeatherAlerts", {
         Log.info("Starting module: " + this.name);
         this.alerts = [];
         this.forecast = [];
+        this.current = null;
         this.loaded = false;
         this.error = null;
         this.lastUpdate = null;
@@ -53,7 +54,7 @@ Module.register("MMM-SevereWeatherAlerts", {
             location: this.config.location,
             metOfficeApiKey: this.config.metOfficeApiKey,
             units: this.config.units,
-            forecastDays: this.config.forecastDays
+            forecastDays: this.config.forecastDays + 1  // +1 because we skip today
         });
     },
 
@@ -61,6 +62,7 @@ Module.register("MMM-SevereWeatherAlerts", {
         if (notification === "WEATHER_DATA") {
             this.alerts = payload.alerts || [];
             this.forecast = payload.forecast || [];
+            this.current = payload.current || null;
             this.loaded = true;
             this.error = null;
             this.lastUpdate = new Date();
@@ -90,7 +92,86 @@ Module.register("MMM-SevereWeatherAlerts", {
             return wrapper;
         }
 
-        // Alerts section
+        // === TODAY'S WEATHER (TOP - LARGE & CENTERED) ===
+        if (this.current) {
+            const todayContainer = document.createElement("div");
+            todayContainer.className = "today-container";
+            
+            // Location header
+            const locationHeader = document.createElement("div");
+            locationHeader.className = "today-location";
+            locationHeader.textContent = this.config.location;
+            todayContainer.appendChild(locationHeader);
+
+            // Main weather row: icon + temperature
+            const mainRow = document.createElement("div");
+            mainRow.className = "today-main";
+            
+            const weatherIcon = document.createElement("span");
+            weatherIcon.className = "today-icon wi " + this.getWeatherIconClass(this.current.weatherCode, this.current.isDay);
+            mainRow.appendChild(weatherIcon);
+
+            const tempDisplay = document.createElement("span");
+            tempDisplay.className = "today-temp";
+            const unit = this.config.units === "metric" ? "°" : "°";
+            tempDisplay.textContent = Math.round(this.current.temperature * 10) / 10 + unit;
+            mainRow.appendChild(tempDisplay);
+
+            todayContainer.appendChild(mainRow);
+
+            // Feels like
+            if (this.current.feelsLike !== undefined) {
+                const feelsLike = document.createElement("div");
+                feelsLike.className = "today-feels-like";
+                feelsLike.textContent = "Feels like " + Math.round(this.current.feelsLike * 10) / 10 + unit;
+                todayContainer.appendChild(feelsLike);
+            }
+
+            // Condition text
+            const condition = document.createElement("div");
+            condition.className = "today-condition";
+            condition.textContent = this.current.condition;
+            todayContainer.appendChild(condition);
+
+            // Details row: wind, humidity, sunrise/sunset
+            const detailsRow = document.createElement("div");
+            detailsRow.className = "today-details";
+
+            // Wind
+            if (this.current.windSpeed !== undefined) {
+                const wind = document.createElement("span");
+                wind.className = "today-detail";
+                const windDir = this.getWindDirection(this.current.windDirection);
+                wind.innerHTML = '<span class="wi wi-strong-wind"></span> ' + 
+                                Math.round(this.current.windSpeed) + ' <sup>' + windDir + '</sup>';
+                detailsRow.appendChild(wind);
+            }
+
+            // Humidity
+            if (this.current.humidity !== undefined) {
+                const humidity = document.createElement("span");
+                humidity.className = "today-detail";
+                humidity.innerHTML = '<span class="wi wi-humidity"></span> ' + this.current.humidity + '%';
+                detailsRow.appendChild(humidity);
+            }
+
+            // Sunrise/Sunset
+            if (this.current.sunrise || this.current.sunset) {
+                const sunTimes = document.createElement("span");
+                sunTimes.className = "today-detail";
+                if (this.current.isDay && this.current.sunset) {
+                    sunTimes.innerHTML = '<span class="wi wi-sunset"></span> ' + this.formatTime(this.current.sunset);
+                } else if (this.current.sunrise) {
+                    sunTimes.innerHTML = '<span class="wi wi-sunrise"></span> ' + this.formatTime(this.current.sunrise);
+                }
+                detailsRow.appendChild(sunTimes);
+            }
+
+            todayContainer.appendChild(detailsRow);
+            wrapper.appendChild(todayContainer);
+        }
+
+        // === ALERTS SECTION (MIDDLE) ===
         const alertsContainer = document.createElement("div");
         alertsContainer.className = "alerts-container";
 
@@ -108,20 +189,23 @@ Module.register("MMM-SevereWeatherAlerts", {
 
         wrapper.appendChild(alertsContainer);
 
-        // Forecast section
-        if (this.config.showForecast && this.forecast.length > 0) {
+        // === FORECAST SECTION (BOTTOM - Starting from TOMORROW) ===
+        if (this.config.showForecast && this.forecast.length > 1) {
             const forecastContainer = document.createElement("div");
             forecastContainer.className = "forecast-container";
             
             const forecastTitle = document.createElement("div");
             forecastTitle.className = "forecast-title";
-            forecastTitle.textContent = this.config.forecastDays + "-Day Outlook";
+            forecastTitle.textContent = this.config.forecastDays + "-Day Forecast";
             forecastContainer.appendChild(forecastTitle);
 
             const forecastGrid = document.createElement("div");
             forecastGrid.className = "forecast-grid";
 
-            this.forecast.slice(0, this.config.forecastDays).forEach(day => {
+            // Skip today (index 0), start from tomorrow
+            const futureForecast = this.forecast.slice(1, this.config.forecastDays + 1);
+            
+            futureForecast.forEach(day => {
                 const dayEl = this.createForecastElement(day);
                 forecastGrid.appendChild(dayEl);
             });
@@ -187,7 +271,6 @@ Module.register("MMM-SevereWeatherAlerts", {
         const dayEl = document.createElement("div");
         dayEl.className = "forecast-day";
         
-        // Check if this day has associated warnings
         if (day.hasWarning) {
             dayEl.classList.add("has-warning");
         }
@@ -199,7 +282,7 @@ Module.register("MMM-SevereWeatherAlerts", {
 
         const icon = document.createElement("div");
         icon.className = "forecast-icon";
-        icon.innerHTML = this.getWeatherIcon(day.weatherCode);
+        icon.innerHTML = '<span class="wi ' + this.getWeatherIconClass(day.weatherCode, true) + '"></span>';
         dayEl.appendChild(icon);
 
         const condition = document.createElement("div");
@@ -209,7 +292,7 @@ Module.register("MMM-SevereWeatherAlerts", {
 
         const temps = document.createElement("div");
         temps.className = "forecast-temps";
-        const unit = this.config.units === "metric" ? "°C" : "°F";
+        const unit = this.config.units === "metric" ? "°" : "°";
         temps.innerHTML = '<span class="temp-high">' + Math.round(day.tempMax) + unit + '</span>' +
                          '<span class="temp-low">' + Math.round(day.tempMin) + unit + '</span>';
         dayEl.appendChild(temps);
@@ -217,11 +300,66 @@ Module.register("MMM-SevereWeatherAlerts", {
         if (day.precipitation > 0) {
             const precip = document.createElement("div");
             precip.className = "forecast-precip";
-            precip.innerHTML = '<i class="fa fa-tint"></i> ' + Math.round(day.precipitation) + '%';
+            precip.innerHTML = '<span class="wi wi-raindrop"></span> ' + Math.round(day.precipitation) + '%';
             dayEl.appendChild(precip);
         }
 
         return dayEl;
+    },
+
+    getWeatherIconClass: function(code, isDay) {
+        // WMO Weather interpretation codes to weather-icons classes
+        const dayPrefix = isDay ? "wi-day-" : "wi-night-alt-";
+        
+        const iconMap = {
+            0: isDay ? "wi-day-sunny" : "wi-night-clear",
+            1: isDay ? "wi-day-sunny" : "wi-night-clear",
+            2: dayPrefix + "cloudy",
+            3: "wi-cloudy",
+            45: "wi-fog",
+            48: "wi-fog",
+            51: dayPrefix + "sprinkle",
+            53: dayPrefix + "sprinkle",
+            55: dayPrefix + "sprinkle",
+            56: dayPrefix + "sleet",
+            57: dayPrefix + "sleet",
+            61: dayPrefix + "rain",
+            63: dayPrefix + "rain",
+            65: dayPrefix + "rain",
+            66: dayPrefix + "rain-mix",
+            67: dayPrefix + "rain-mix",
+            71: dayPrefix + "snow",
+            73: dayPrefix + "snow",
+            75: dayPrefix + "snow",
+            77: dayPrefix + "snow",
+            80: dayPrefix + "showers",
+            81: dayPrefix + "showers",
+            82: dayPrefix + "showers",
+            85: dayPrefix + "snow",
+            86: dayPrefix + "snow",
+            95: dayPrefix + "thunderstorm",
+            96: dayPrefix + "thunderstorm",
+            99: dayPrefix + "thunderstorm"
+        };
+        
+        return iconMap[code] || "wi-na";
+    },
+
+    getWindDirection: function(degrees) {
+        if (degrees === undefined || degrees === null) return "";
+        const directions = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", 
+                          "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"];
+        const index = Math.round(degrees / 22.5) % 16;
+        return directions[index];
+    },
+
+    formatTime: function(dateStr) {
+        const date = new Date(dateStr);
+        return date.toLocaleTimeString(this.config.language, { 
+            hour: '2-digit', 
+            minute: '2-digit',
+            hour12: false 
+        });
     },
 
     getSeverityClass: function(severity) {
@@ -246,36 +384,6 @@ Module.register("MMM-SevereWeatherAlerts", {
         if (e.includes("tornado")) return "fa-tornado";
         if (e.includes("hurricane") || e.includes("cyclone")) return "fa-hurricane";
         return "fa-exclamation-triangle";
-    },
-
-    getWeatherIcon: function(code) {
-        // WMO Weather interpretation codes
-        const icons = {
-            0: '<i class="fa fa-sun"></i>',           // Clear
-            1: '<i class="fa fa-sun"></i>',           // Mainly clear
-            2: '<i class="fa fa-cloud-sun"></i>',     // Partly cloudy
-            3: '<i class="fa fa-cloud"></i>',         // Overcast
-            45: '<i class="fa fa-smog"></i>',         // Fog
-            48: '<i class="fa fa-smog"></i>',         // Depositing rime fog
-            51: '<i class="fa fa-cloud-rain"></i>',   // Light drizzle
-            53: '<i class="fa fa-cloud-rain"></i>',   // Moderate drizzle
-            55: '<i class="fa fa-cloud-rain"></i>',   // Dense drizzle
-            61: '<i class="fa fa-cloud-showers-heavy"></i>', // Slight rain
-            63: '<i class="fa fa-cloud-showers-heavy"></i>', // Moderate rain
-            65: '<i class="fa fa-cloud-showers-heavy"></i>', // Heavy rain
-            71: '<i class="fa fa-snowflake"></i>',    // Slight snow
-            73: '<i class="fa fa-snowflake"></i>',    // Moderate snow
-            75: '<i class="fa fa-snowflake"></i>',    // Heavy snow
-            80: '<i class="fa fa-cloud-rain"></i>',   // Rain showers
-            81: '<i class="fa fa-cloud-showers-heavy"></i>', // Moderate showers
-            82: '<i class="fa fa-cloud-showers-heavy"></i>', // Violent showers
-            85: '<i class="fa fa-snowflake"></i>',    // Snow showers
-            86: '<i class="fa fa-snowflake"></i>',    // Heavy snow showers
-            95: '<i class="fa fa-bolt"></i>',         // Thunderstorm
-            96: '<i class="fa fa-bolt"></i>',         // Thunderstorm with hail
-            99: '<i class="fa fa-bolt"></i>'          // Thunderstorm with heavy hail
-        };
-        return icons[code] || '<i class="fa fa-question"></i>';
     },
 
     getDayName: function(dateStr) {

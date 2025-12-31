@@ -1,5 +1,5 @@
 /* Node Helper for MMM-SevereWeatherAlerts
- * Fetches weather alerts and forecast data
+ * Fetches current weather, alerts, and forecast data
  */
 
 const NodeHelper = require("node_helper");
@@ -19,15 +19,16 @@ module.exports = NodeHelper.create({
 
     fetchWeatherData: async function(config) {
         try {
-            const [alerts, forecast] = await Promise.all([
-                this.fetchAlerts(config),
-                this.fetchForecast(config)
+            const [currentAndForecast, alerts] = await Promise.all([
+                this.fetchCurrentAndForecast(config),
+                this.fetchAlerts(config)
             ]);
 
             // Cross-reference alerts with forecast days
-            const forecastWithWarnings = this.mapAlertsToForecast(alerts, forecast);
+            const forecastWithWarnings = this.mapAlertsToForecast(alerts, currentAndForecast.forecast);
 
             this.sendSocketNotification("WEATHER_DATA", {
+                current: currentAndForecast.current,
                 alerts: alerts,
                 forecast: forecastWithWarnings
             });
@@ -39,6 +40,27 @@ module.exports = NodeHelper.create({
         }
     },
 
+    fetchCurrentAndForecast: function(config) {
+        return new Promise((resolve, reject) => {
+            const unit = config.units === "metric" ? "" : "&temperature_unit=fahrenheit&wind_speed_unit=mph";
+            const url = `https://api.open-meteo.com/v1/forecast?latitude=${config.latitude}&longitude=${config.longitude}` +
+                       `&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,wind_direction_10m,is_day` +
+                       `&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum,wind_speed_10m_max,wind_gusts_10m_max,sunrise,sunset` +
+                       `&timezone=auto&forecast_days=${config.forecastDays}${unit}`;
+
+            this.makeRequest(url)
+                .then(data => {
+                    const current = this.parseCurrentWeather(data);
+                    const forecast = this.parseOpenMeteoForecast(data);
+                    resolve({ current, forecast });
+                })
+                .catch(err => {
+                    console.error("Weather fetch error:", err.message);
+                    reject(err);
+                });
+        });
+    },
+
     fetchAlerts: async function(config) {
         // Check if UK location (roughly)
         const isUK = config.latitude >= 49.5 && config.latitude <= 61 &&
@@ -48,13 +70,12 @@ module.exports = NodeHelper.create({
             return this.fetchMetOfficeAlerts(config);
         }
 
-        // Use Open-Meteo for alerts (global coverage)
+        // Use Open-Meteo for alerts (analyze weather data)
         return this.fetchOpenMeteoAlerts(config);
     },
 
     fetchMetOfficeAlerts: function(config) {
         return new Promise((resolve, reject) => {
-            // Met Office DataHub API for warnings
             const url = `https://data.hub.api.metoffice.gov.uk/sitespecific/v0/point/daily?latitude=${config.latitude}&longitude=${config.longitude}`;
             
             const options = {
@@ -78,9 +99,7 @@ module.exports = NodeHelper.create({
 
     fetchOpenMeteoAlerts: function(config) {
         return new Promise((resolve, reject) => {
-            // Open-Meteo doesn't have a direct alerts API, but we can check for extreme conditions
-            // We'll also try the weather API's weather interpretation
-            const url = `https://api.open-meteo.com/v1/forecast?latitude=${config.latitude}&longitude=${config.longitude}&current=weather_code,wind_speed_10m,wind_gusts_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,wind_speed_10m_max,wind_gusts_10m_max&timezone=auto&forecast_days=3`;
+            const url = `https://api.open-meteo.com/v1/forecast?latitude=${config.latitude}&longitude=${config.longitude}&current=weather_code,wind_speed_10m,wind_gusts_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,wind_speed_10m_max,wind_gusts_10m_max&timezone=auto&forecast_days=4`;
 
             this.makeRequest(url)
                 .then(data => {
@@ -89,23 +108,6 @@ module.exports = NodeHelper.create({
                 })
                 .catch(err => {
                     console.error("Open-Meteo alerts error:", err.message);
-                    resolve([]);
-                });
-        });
-    },
-
-    fetchForecast: function(config) {
-        return new Promise((resolve, reject) => {
-            const unit = config.units === "metric" ? "" : "&temperature_unit=fahrenheit";
-            const url = `https://api.open-meteo.com/v1/forecast?latitude=${config.latitude}&longitude=${config.longitude}&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,precipitation_sum,wind_speed_10m_max&timezone=auto&forecast_days=${config.forecastDays}${unit}`;
-
-            this.makeRequest(url)
-                .then(data => {
-                    const forecast = this.parseOpenMeteoForecast(data);
-                    resolve(forecast);
-                })
-                .catch(err => {
-                    console.error("Forecast error:", err.message);
                     resolve([]);
                 });
         });
@@ -143,10 +145,60 @@ module.exports = NodeHelper.create({
         });
     },
 
+    parseCurrentWeather: function(data) {
+        if (!data || !data.current) return null;
+
+        const current = data.current;
+        const daily = data.daily || {};
+        
+        const weatherDescriptions = {
+            0: "Clear sky",
+            1: "Mainly clear",
+            2: "Partly cloudy",
+            3: "Overcast",
+            45: "Foggy",
+            48: "Icy fog",
+            51: "Light drizzle",
+            53: "Drizzle",
+            55: "Dense drizzle",
+            56: "Freezing drizzle",
+            57: "Heavy freezing drizzle",
+            61: "Light rain",
+            63: "Rain",
+            65: "Heavy rain",
+            66: "Freezing rain",
+            67: "Heavy freezing rain",
+            71: "Light snow",
+            73: "Snow",
+            75: "Heavy snow",
+            77: "Snow grains",
+            80: "Light showers",
+            81: "Showers",
+            82: "Heavy showers",
+            85: "Snow showers",
+            86: "Heavy snow showers",
+            95: "Thunderstorm",
+            96: "Thunderstorm with hail",
+            99: "Severe thunderstorm"
+        };
+
+        return {
+            temperature: current.temperature_2m,
+            feelsLike: current.apparent_temperature,
+            humidity: current.relative_humidity_2m,
+            weatherCode: current.weather_code,
+            condition: weatherDescriptions[current.weather_code] || "Unknown",
+            windSpeed: current.wind_speed_10m,
+            windDirection: current.wind_direction_10m,
+            isDay: current.is_day === 1,
+            sunrise: daily.sunrise ? daily.sunrise[0] : null,
+            sunset: daily.sunset ? daily.sunset[0] : null
+        };
+    },
+
     parseMetOfficeAlerts: function(data) {
         const alerts = [];
         
-        // Parse Met Office response format
         if (data && data.features) {
             data.features.forEach(feature => {
                 if (feature.properties && feature.properties.warnings) {
@@ -179,7 +231,6 @@ module.exports = NodeHelper.create({
         const windGusts = daily.wind_gusts_10m_max || [];
         const dates = daily.time || [];
 
-        // Check for severe weather conditions
         for (let i = 0; i < weatherCodes.length; i++) {
             const code = weatherCodes[i];
             const wind = windMax[i] || 0;
@@ -250,9 +301,7 @@ module.exports = NodeHelper.create({
             }
         }
 
-        // Remove duplicates and sort by severity
-        const uniqueAlerts = this.deduplicateAlerts(alerts);
-        return uniqueAlerts;
+        return this.deduplicateAlerts(alerts);
     },
 
     parseOpenMeteoForecast: function(data) {
@@ -323,7 +372,6 @@ module.exports = NodeHelper.create({
         const seen = new Set();
         const severityOrder = { 'red': 3, 'amber': 2, 'yellow': 1 };
         
-        // Sort by severity (highest first)
         alerts.sort((a, b) => {
             const aOrder = severityOrder[a.severity.toLowerCase()] || 0;
             const bOrder = severityOrder[b.severity.toLowerCase()] || 0;
