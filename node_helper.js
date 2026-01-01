@@ -66,12 +66,255 @@ module.exports = NodeHelper.create({
         const isUK = config.latitude >= 49.5 && config.latitude <= 61 &&
                      config.longitude >= -8.5 && config.longitude <= 2;
 
-        if (isUK && config.metOfficeApiKey) {
-            return this.fetchMetOfficeAlerts(config);
+        if (isUK) {
+            // Try RSS feeds first (no API key needed)
+            try {
+                const alerts = await this.fetchMetOfficeRSSAlerts(config);
+                if (alerts && alerts.length > 0) {
+                    return alerts;
+                }
+            } catch (err) {
+                console.log("Met Office RSS failed, trying API:", err.message);
+            }
+            
+            // Fallback to API if RSS fails and API key is provided
+            if (config.metOfficeApiKey) {
+                return this.fetchMetOfficeAlerts(config);
+            }
         }
 
         // Use Open-Meteo for alerts (analyze weather data)
         return this.fetchOpenMeteoAlerts(config);
+    },
+
+    getUKRegion: function(latitude, longitude) {
+        // UK region codes based on approximate boundaries
+        // Regions are roughly defined by lat/lon ranges
+        
+        // Orkney & Shetland
+        if (latitude >= 58.5 && longitude >= -3.5) return 'os';
+        
+        // Highlands & Eilean Siar
+        if (latitude >= 56.5 && latitude < 58.5 && longitude >= -6.5 && longitude < -3.5) return 'he';
+        
+        // Grampian
+        if (latitude >= 56.5 && latitude < 58.5 && longitude >= -3.5 && longitude < -1.5) return 'gr';
+        
+        // Strathclyde
+        if (latitude >= 55.0 && latitude < 56.5 && longitude >= -6.5 && longitude < -3.5) return 'st';
+        
+        // Central, Tayside & Fife
+        if (latitude >= 55.5 && latitude < 56.5 && longitude >= -3.5 && longitude < -2.5) return 'ta';
+        
+        // SW Scotland, Lothian Borders
+        if (latitude >= 54.5 && latitude < 56.0 && longitude >= -4.5 && longitude < -2.0) return 'dg';
+        
+        // Northern Ireland
+        if (latitude >= 54.0 && latitude < 55.5 && longitude >= -8.5 && longitude < -5.0) return 'ni';
+        
+        // Wales
+        if (latitude >= 51.0 && latitude < 54.0 && longitude >= -5.5 && longitude < -2.5) return 'wl';
+        
+        // North West England
+        if (latitude >= 53.0 && latitude < 55.0 && longitude >= -3.5 && longitude < -1.5) return 'nw';
+        
+        // North East England
+        if (latitude >= 54.0 && latitude < 55.5 && longitude >= -2.0 && longitude < 0.0) return 'ne';
+        
+        // Yorkshire & Humber
+        if (latitude >= 53.0 && latitude < 54.5 && longitude >= -2.5 && longitude < -0.5) return 'yh';
+        
+        // West Midlands
+        if (latitude >= 52.0 && latitude < 53.5 && longitude >= -3.0 && longitude < -1.0) return 'wm';
+        
+        // East Midlands
+        if (latitude >= 52.0 && latitude < 54.0 && longitude >= -2.0 && longitude < 0.5) return 'em';
+        
+        // East of England
+        if (latitude >= 51.5 && latitude < 53.5 && longitude >= 0.0 && longitude < 1.5) return 'ee';
+        
+        // South West England
+        if (latitude >= 50.0 && latitude < 52.0 && longitude >= -5.5 && longitude < -1.5) return 'sw';
+        
+        // London & South East England
+        if (latitude >= 50.5 && latitude < 52.0 && longitude >= -1.5 && longitude < 1.5) return 'se';
+        
+        // Default to UK-wide if region can't be determined
+        return 'UK';
+    },
+
+    fetchMetOfficeRSSAlerts: function(config) {
+        return new Promise((resolve, reject) => {
+            const region = this.getUKRegion(config.latitude, config.longitude);
+            const url = `https://www.metoffice.gov.uk/public/data/PWSCache/WarningsRSS/Region/${region}`;
+            
+            console.log(`Fetching Met Office RSS alerts for region: ${region} (${config.latitude}, ${config.longitude})`);
+            
+            this.makeRequest(url)
+                .then(xmlData => {
+                    this.parseMetOfficeRSS(xmlData)
+                        .then(alerts => resolve(alerts))
+                        .catch(err => reject(err));
+                })
+                .catch(err => {
+                    reject(err);
+                });
+        });
+    },
+
+    parseMetOfficeRSS: function(xmlData) {
+        return new Promise((resolve, reject) => {
+            // Simple XML parsing for RSS feed
+            // RSS structure: <rss><channel><item>...</item></channel></rss>
+            const alerts = [];
+            
+            try {
+                // Extract items using regex (simple approach, works for RSS)
+                const itemRegex = /<item>(.*?)<\/item>/gs;
+                const items = xmlData.match(itemRegex) || [];
+                
+                items.forEach(itemXml => {
+                    try {
+                        // Extract fields from RSS item
+                        const titleMatch = itemXml.match(/<title>(.*?)<\/title>/s);
+                        const descriptionMatch = itemXml.match(/<description>(.*?)<\/description>/s);
+                        
+                        if (!titleMatch) return;
+                        
+                        const title = titleMatch[1].trim();
+                        const description = descriptionMatch ? descriptionMatch[1].trim() : '';
+                        
+                        // Parse title to extract severity and event type
+                        // Format: "Yellow warning of snow, ice affecting South West England"
+                        let severity = "Yellow";
+                        let event = title;
+                        
+                        if (title.toLowerCase().includes('red warning') || title.toLowerCase().includes('extreme')) {
+                            severity = "Red";
+                        } else if (title.toLowerCase().includes('amber warning') || title.toLowerCase().includes('severe')) {
+                            severity = "Amber";
+                        } else if (title.toLowerCase().includes('yellow warning')) {
+                            severity = "Yellow";
+                        }
+                        
+                        // Extract event type from title
+                        // Format: "[Severity] warning of [event types] affecting [region]"
+                        // Example: "Yellow warning of snow, ice affecting South West England"
+                        const eventMatch = title.match(/warning of (.+?) affecting/i);
+                        if (eventMatch) {
+                            event = eventMatch[1].trim();
+                            // Capitalize first letter of each word
+                            event = event.split(',').map(e => {
+                                const trimmed = e.trim();
+                                return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+                            }).join(', ');
+                            event += " Warning";
+                        } else {
+                            // Fallback: extract from title
+                            event = title
+                                .replace(/red warning/gi, '')
+                                .replace(/amber warning/gi, '')
+                                .replace(/yellow warning/gi, '')
+                                .replace(/of/gi, '')
+                                .replace(/affecting.*/gi, '')
+                                .trim();
+                            if (!event || event.length < 3) {
+                                event = "Weather Warning";
+                            }
+                        }
+                        
+                        // Parse dates from description
+                        // Format: "valid from 0000 Fri 02 Jan to 1200 Fri 02 Jan"
+                        let startDate = null;
+                        let endDate = null;
+                        
+                        const dateTimeRegex = /valid from (\d{4}) (\w{3}) (\d{1,2}) (\w{3}) to (\d{4}) (\w{3}) (\d{1,2}) (\w{3})/i;
+                        const dateTimeMatch = description.match(dateTimeRegex);
+                        
+                        if (dateTimeMatch) {
+                            // Parse: "0000 Fri 02 Jan" format
+                            const startTime = dateTimeMatch[1]; // "0000"
+                            const startDay = dateTimeMatch[2]; // "Fri"
+                            const startDateNum = dateTimeMatch[3]; // "02"
+                            const startMonth = dateTimeMatch[4]; // "Jan"
+                            
+                            const endTime = dateTimeMatch[5]; // "1200"
+                            const endDay = dateTimeMatch[6]; // "Fri"
+                            const endDateNum = dateTimeMatch[7]; // "02"
+                            const endMonth = dateTimeMatch[8]; // "Jan"
+                            
+                            startDate = this.parseMetOfficeDateTime(startDateNum, startMonth, startTime);
+                            endDate = this.parseMetOfficeDateTime(endDateNum, endMonth, endTime);
+                        } else {
+                            // Try simpler date format: "Fri 02 Jan" or "2026-01-02"
+                            const simpleDateRegex = /(\d{4}-\d{2}-\d{2})/g;
+                            const dates = description.match(simpleDateRegex) || [];
+                            
+                            if (dates.length >= 2) {
+                                startDate = dates[0] + "T00:00:00Z";
+                                endDate = dates[1] + "T23:59:59Z";
+                            } else if (dates.length === 1) {
+                                startDate = dates[0] + "T00:00:00Z";
+                                endDate = dates[0] + "T23:59:59Z";
+                            }
+                        }
+                        
+                        // If we have a valid alert
+                        if (event && startDate) {
+                            alerts.push({
+                                event: event,
+                                headline: title,
+                                description: description,
+                                severity: severity,
+                                start: startDate,
+                                end: endDate || startDate,
+                                source: "Met Office RSS"
+                            });
+                        }
+                    } catch (itemErr) {
+                        console.log("Error parsing RSS item:", itemErr.message);
+                    }
+                });
+                
+                resolve(alerts);
+            } catch (err) {
+                reject(new Error("Failed to parse RSS XML: " + err.message));
+            }
+        });
+    },
+
+    parseMetOfficeDateTime: function(day, month, time) {
+        // Parse format: "02", "Jan", "0000" -> "2026-01-02T00:00:00Z"
+        try {
+            const monthNames = {
+                'jan': '01', 'feb': '02', 'mar': '03', 'apr': '04',
+                'may': '05', 'jun': '06', 'jul': '07', 'aug': '08',
+                'sep': '09', 'oct': '10', 'nov': '11', 'dec': '12'
+            };
+            
+            const monthNum = monthNames[month.toLowerCase()] || '01';
+            const dayNum = day.padStart(2, '0');
+            
+            // Determine year (assume current year or next year if month has passed)
+            const now = new Date();
+            let year = now.getFullYear();
+            const currentMonth = now.getMonth() + 1; // 1-12
+            
+            // If the month is earlier in the year than current month, might be next year
+            // For simplicity, use current year (warnings are usually near-term)
+            if (parseInt(monthNum) < currentMonth && now.getDate() > 15) {
+                year = year + 1;
+            }
+            
+            // Parse time "0000" -> "00:00"
+            const hour = time.substring(0, 2);
+            const minute = time.substring(2, 4) || "00";
+            
+            return `${year}-${monthNum}-${dayNum}T${hour}:${minute}:00Z`;
+        } catch (err) {
+            // Fallback to today
+            return new Date().toISOString();
+        }
     },
 
     fetchMetOfficeAlerts: function(config) {
