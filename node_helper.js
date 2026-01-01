@@ -70,7 +70,9 @@ module.exports = NodeHelper.create({
             // Try RSS feeds first (no API key needed)
             try {
                 const alerts = await this.fetchMetOfficeRSSAlerts(config);
-                if (alerts && alerts.length > 0) {
+                console.log(`Met Office RSS returned ${alerts ? alerts.length : 0} alert(s)`);
+                if (alerts) {
+                    // Return alerts even if empty (means no warnings)
                     return alerts;
                 }
             } catch (err) {
@@ -152,11 +154,23 @@ module.exports = NodeHelper.create({
             
             this.makeRequest(url)
                 .then(xmlData => {
+                    if (!xmlData || xmlData.length === 0) {
+                        console.log("Met Office RSS returned empty response");
+                        resolve([]);
+                        return;
+                    }
                     this.parseMetOfficeRSS(xmlData)
-                        .then(alerts => resolve(alerts))
-                        .catch(err => reject(err));
+                        .then(alerts => {
+                            console.log(`Parsed ${alerts.length} alert(s) from RSS feed`);
+                            resolve(alerts);
+                        })
+                        .catch(err => {
+                            console.log("Error parsing RSS:", err.message);
+                            reject(err);
+                        });
                 })
                 .catch(err => {
+                    console.log("Error fetching RSS:", err.message);
                     reject(err);
                 });
         });
@@ -295,14 +309,18 @@ module.exports = NodeHelper.create({
             const monthNum = monthNames[month.toLowerCase()] || '01';
             const dayNum = day.padStart(2, '0');
             
-            // Determine year (assume current year or next year if month has passed)
+            // Determine year - warnings are always for current or very near future
             const now = new Date();
             let year = now.getFullYear();
             const currentMonth = now.getMonth() + 1; // 1-12
+            const currentDay = now.getDate();
+            const warningMonth = parseInt(monthNum);
+            const warningDay = parseInt(dayNum);
             
-            // If the month is earlier in the year than current month, might be next year
-            // For simplicity, use current year (warnings are usually near-term)
-            if (parseInt(monthNum) < currentMonth && now.getDate() > 15) {
+            // If warning month/day is in the past (same month but day passed, or month passed), use next year
+            // Otherwise use current year
+            if (warningMonth < currentMonth || 
+                (warningMonth === currentMonth && warningDay < currentDay)) {
                 year = year + 1;
             }
             
