@@ -355,16 +355,19 @@ Module.register("MMM-SevereWeatherAlerts", {
         const alertsContainer = document.createElement("div");
         alertsContainer.className = "alerts-container";
 
-        // Filter alerts to next 3 days
+        // Filter alerts to today plus next 3 days (4 days total)
         const now = new Date();
-        const threeDaysFromNow = new Date(now);
-        threeDaysFromNow.setDate(now.getDate() + 3);
+        const todayStart = new Date(now);
+        todayStart.setHours(0, 0, 0, 0);
+        const threeDaysFromNow = new Date(todayStart);
+        threeDaysFromNow.setDate(todayStart.getDate() + 3);
         threeDaysFromNow.setHours(23, 59, 59, 999);
 
         const upcomingAlerts = this.alerts.filter(alert => {
             if (!alert.start) return false;
             const alertStart = new Date(alert.start);
-            return alertStart >= now && alertStart <= threeDaysFromNow;
+            alertStart.setHours(0, 0, 0, 0);
+            return alertStart >= todayStart && alertStart <= threeDaysFromNow;
         });
 
         if (upcomingAlerts.length > 0) {
@@ -375,7 +378,7 @@ Module.register("MMM-SevereWeatherAlerts", {
         } else if (this.config.showNoAlertsMessage) {
             const noAlerts = document.createElement("div");
             noAlerts.className = "no-alerts";
-            noAlerts.innerHTML = '<i class="fa fa-check-circle"></i> No weather warnings for the next 3 days';
+            noAlerts.innerHTML = '<i class="fa fa-check-circle"></i> No weather warnings (today + next 3 days)';
             alertsContainer.appendChild(noAlerts);
         }
 
