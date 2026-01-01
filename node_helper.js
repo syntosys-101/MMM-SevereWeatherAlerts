@@ -199,6 +199,7 @@ module.exports = NodeHelper.create({
     parseMetOfficeAlerts: function(data) {
         const alerts = [];
         
+        // First, check for explicit warnings (if they exist)
         if (data && data.features) {
             data.features.forEach(feature => {
                 if (feature.properties && feature.properties.warnings) {
@@ -216,8 +217,84 @@ module.exports = NodeHelper.create({
                 }
             });
         }
+        
+        // If no explicit warnings, generate warnings from probability fields in timeSeries
+        if (alerts.length === 0 && data && data.features) {
+            data.features.forEach(feature => {
+                if (feature.properties && feature.properties.timeSeries) {
+                    feature.properties.timeSeries.forEach(day => {
+                        if (!day.time) return;
+                        
+                        const date = day.time.split('T')[0]; // Extract date part
+                        const dayProbHeavyRain = day.dayProbabilityOfHeavyRain || 0;
+                        const nightProbHeavyRain = day.nightProbabilityOfHeavyRain || 0;
+                        const dayProbHeavySnow = day.dayProbabilityOfHeavySnow || 0;
+                        const nightProbHeavySnow = day.nightProbabilityOfHeavySnow || 0;
+                        const dayProbSferics = day.dayProbabilityOfSferics || 0;
+                        const nightProbSferics = day.nightProbabilityOfSferics || 0;
+                        const maxWindSpeed = Math.max(day.midday10MWindSpeed || 0, day.midnight10MWindSpeed || 0);
+                        const maxWindGust = Math.max(day.midday10MWindGust || 0, day.midnight10MWindGust || 0);
+                        
+                        // Heavy Rain Warning (probability > 50%)
+                        if (dayProbHeavyRain > 50 || nightProbHeavyRain > 50) {
+                            const maxProb = Math.max(dayProbHeavyRain, nightProbHeavyRain);
+                            alerts.push({
+                                event: "Heavy Rain Warning",
+                                description: `Heavy rainfall expected (${maxProb}% probability). Surface water flooding possible in places.`,
+                                severity: maxProb > 70 ? "Amber" : "Yellow",
+                                start: date + "T00:00:00",
+                                end: date + "T23:59:59",
+                                source: "Met Office Analysis"
+                            });
+                        }
+                        
+                        // Heavy Snow Warning (probability > 50%)
+                        if (dayProbHeavySnow > 50 || nightProbHeavySnow > 50) {
+                            const maxProb = Math.max(dayProbHeavySnow, nightProbHeavySnow);
+                            alerts.push({
+                                event: "Snow Warning",
+                                description: `Heavy snow expected (${maxProb}% probability). Travel disruption likely. Take care on roads and paths.`,
+                                severity: maxProb > 70 ? "Amber" : "Yellow",
+                                start: date + "T00:00:00",
+                                end: date + "T23:59:59",
+                                source: "Met Office Analysis"
+                            });
+                        }
+                        
+                        // Thunderstorm Warning (probability > 50%)
+                        if (dayProbSferics > 50 || nightProbSferics > 50) {
+                            const maxProb = Math.max(dayProbSferics, nightProbSferics);
+                            alerts.push({
+                                event: "Thunderstorm Warning",
+                                description: `Thunderstorms expected (${maxProb}% probability) with possible lightning and heavy rain.`,
+                                severity: maxProb > 70 ? "Amber" : "Yellow",
+                                start: date + "T00:00:00",
+                                end: date + "T23:59:59",
+                                source: "Met Office Analysis"
+                            });
+                        }
+                        
+                        // High Wind Warning (>20 m/s sustained or >25 m/s gusts)
+                        // Convert m/s to km/h for comparison (20 m/s ≈ 72 km/h, 25 m/s ≈ 90 km/h)
+                        if (maxWindSpeed > 20 || maxWindGust > 25) {
+                            const windKmh = Math.round(maxWindSpeed * 3.6);
+                            const gustKmh = Math.round(maxWindGust * 3.6);
+                            const severity = maxWindSpeed > 25 || maxWindGust > 30 ? "Amber" : "Yellow";
+                            alerts.push({
+                                event: "Wind Warning",
+                                description: `Strong winds expected. Sustained: ${windKmh} km/h, Gusts: ${gustKmh} km/h. Secure loose objects and take care when driving.`,
+                                severity: severity,
+                                start: date + "T00:00:00",
+                                end: date + "T23:59:59",
+                                source: "Met Office Analysis"
+                            });
+                        }
+                    });
+                }
+            });
+        }
 
-        return alerts;
+        return this.deduplicateAlerts(alerts);
     },
 
     parseOpenMeteoForAlerts: function(data) {
