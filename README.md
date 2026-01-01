@@ -11,6 +11,7 @@ A MagicMirror² module that displays **severe weather warnings** and alerts with
 - 🇬🇧 **Met Office Support** - Optional integration with Met Office DataHub API for enhanced UK coverage
 - 📅 **3-Day Forecast** - Shows weather outlook with visual indicators for days with warnings
 - 🎨 **Emergency Broadcast Aesthetic** - Bold, attention-grabbing warning display
+- 🎨 **Fully Customizable Colors** - Configure all colors via config to match your theme
 - 📱 **Responsive Design** - Supports both standard and compact display modes
 - 🔄 **Auto-rotating Display Support** - Works with rotated portrait displays
 
@@ -74,6 +75,205 @@ Add to your `config/config.js`:
 | `compactMode` | `false` | Smaller display for narrow panels |
 | `showNoAlertsMessage` | `true` | Show message when no alerts active |
 | `metOfficeApiKey` | `null` | Optional: Met Office DataHub API key |
+| `colors` | `{...}` | Color customization object (see [Color Configuration](#color-configuration)) |
+
+### Color Configuration
+
+All colors in the module can be customized via the `colors` config option. Colors support hex (`#ffffff`), rgb (`rgb(255, 255, 255)`), and rgba (`rgba(255, 255, 255, 0.5)`) formats.
+
+**Default colors match the current module appearance.** You only need to specify colors you want to change.
+
+#### Basic Color Structure
+
+```javascript
+colors: {
+    // Base colors
+    text: "#ffffff",
+    backgroundOverlay: "rgba(0, 0, 0, 0.25)",
+    border: "rgba(255, 255, 255, 0.08)",
+    
+    // Loading & Error states
+    loading: "#00ff00",
+    errorText: "#ff6b6b",
+    errorBackground: "rgba(255, 0, 0, 0.1)",
+    errorBorder: "#ff0000",
+    
+    // Today's weather section
+    today: {
+        location: "rgba(255, 255, 255, 0.5)",
+        icon: "#00ff00",
+        iconGlow: "rgba(0, 255, 0, 0.4)",
+        temperature: "#ffffff",
+        feelsLike: "rgba(255, 255, 255, 0.6)",
+        condition: "rgba(255, 255, 255, 0.85)",
+        detailText: "rgba(255, 255, 255, 0.6)",
+        detailIcon: "#00ff00",
+        detailIconOpacity: 0.8,
+        detailSuperscript: "rgba(255, 255, 255, 0.5)"
+    },
+    
+    // No alerts message
+    noAlerts: {
+        text: "#00ff00",
+        background: "rgba(0, 255, 0, 0.05)",
+        border: "rgba(0, 255, 0, 0.15)"
+    },
+    
+    // Alert severity colors
+    alerts: {
+        red: {
+            backgroundStart: "rgba(180, 0, 0, 0.9)",
+            backgroundEnd: "rgba(100, 0, 0, 0.85)",
+            border: "#ff0000",
+            shadowOuter: "rgba(255, 0, 0, 0.3)",
+            shadowInner: "rgba(255, 0, 0, 0.1)",
+            shadowOuterAnimated: "rgba(255, 0, 0, 0.5)",
+            shadowInnerAnimated: "rgba(255, 0, 0, 0.2)",
+            stripe1: "#ff0000",
+            stripe2: "#000000"
+        },
+        amber: {
+            backgroundStart: "rgba(180, 100, 0, 0.9)",
+            backgroundEnd: "rgba(120, 60, 0, 0.85)",
+            border: "#ff8c00",
+            shadowOuter: "rgba(255, 140, 0, 0.2)",
+            shadowInner: "rgba(255, 140, 0, 0.1)"
+        },
+        yellow: {
+            backgroundStart: "rgba(180, 160, 0, 0.85)",
+            backgroundEnd: "rgba(100, 90, 0, 0.8)",
+            border: "#ffd700",
+            shadowOuter: "rgba(255, 215, 0, 0.2)",
+            shadowInner: "rgba(255, 215, 0, 0.1)"
+        },
+        badgeBackground: "rgba(0, 0, 0, 0.3)",
+        descriptionBorder: "rgba(255, 255, 255, 0.3)"
+    },
+    
+    // Forecast section
+    forecast: {
+        title: "rgba(255, 255, 255, 0.5)",
+        dayBackground: "rgba(255, 255, 255, 0.03)",
+        dayHover: "rgba(255, 255, 255, 0.08)",
+        dayName: "rgba(255, 255, 255, 0.85)",
+        icon: "#00ff00",
+        iconGlow: "rgba(0, 255, 0, 0.3)",
+        warningIcon: "#ff8c00",
+        warningIconGlow: "rgba(255, 140, 0, 0.4)",
+        warningBorder: "rgba(255, 140, 0, 0.4)",
+        warningBackground: "rgba(255, 140, 0, 0.08)",
+        condition: "rgba(255, 255, 255, 0.6)",
+        tempHigh: "#ff6b6b",
+        tempLow: "#6bc5ff",
+        precipitation: "#6bc5ff"
+    },
+    
+    // Scrollbar
+    scrollbar: {
+        track: "rgba(0, 0, 0, 0.2)",
+        thumb: "rgba(0, 255, 0, 0.3)"
+    }
+}
+```
+
+#### Color Configuration Examples
+
+**Example 1: Change accent color from green to blue**
+
+```javascript
+{
+    module: "MMM-SevereWeatherAlerts",
+    position: "top_right",
+    config: {
+        latitude: 51.5074,
+        longitude: -0.1278,
+        location: "London",
+        colors: {
+            today: {
+                icon: "#00aaff",
+                iconGlow: "rgba(0, 170, 255, 0.4)"
+            },
+            forecast: {
+                icon: "#00aaff",
+                iconGlow: "rgba(0, 170, 255, 0.3)"
+            },
+            loading: "#00aaff",
+            noAlerts: {
+                text: "#00aaff",
+                border: "rgba(0, 170, 255, 0.15)"
+            },
+            scrollbar: {
+                thumb: "rgba(0, 170, 255, 0.3)"
+            }
+        }
+    }
+}
+```
+
+**Example 2: Customize alert colors**
+
+```javascript
+{
+    module: "MMM-SevereWeatherAlerts",
+    position: "top_right",
+    config: {
+        latitude: 51.5074,
+        longitude: -0.1278,
+        location: "London",
+        colors: {
+            alerts: {
+                red: {
+                    border: "#ff3333",
+                    backgroundStart: "rgba(200, 0, 0, 0.95)",
+                    backgroundEnd: "rgba(120, 0, 0, 0.9)"
+                },
+                amber: {
+                    border: "#ffaa00",
+                    backgroundStart: "rgba(200, 120, 0, 0.9)",
+                    backgroundEnd: "rgba(140, 80, 0, 0.85)"
+                }
+            }
+        }
+    }
+}
+```
+
+**Example 3: Dark theme with purple accents**
+
+```javascript
+{
+    module: "MMM-SevereWeatherAlerts",
+    position: "top_right",
+    config: {
+        latitude: 51.5074,
+        longitude: -0.1278,
+        location: "London",
+        colors: {
+            text: "#e0e0e0",
+            backgroundOverlay: "rgba(0, 0, 0, 0.4)",
+            today: {
+                icon: "#9d4edd",
+                iconGlow: "rgba(157, 78, 221, 0.5)",
+                temperature: "#ffffff"
+            },
+            forecast: {
+                icon: "#9d4edd",
+                iconGlow: "rgba(157, 78, 221, 0.4)",
+                tempHigh: "#ff6b9d",
+                tempLow: "#90e0ef"
+            },
+            loading: "#9d4edd",
+            noAlerts: {
+                text: "#9d4edd",
+                background: "rgba(157, 78, 221, 0.08)",
+                border: "rgba(157, 78, 221, 0.2)"
+            }
+        }
+    }
+}
+```
+
+**Note:** You can override any individual color property. Colors not specified will use the default values.
 
 ### Finding Your Coordinates
 
@@ -163,6 +363,31 @@ Works great alongside [MMM-MatrixRain](https://github.com/syntosys-101/MMM-Matri
         longitude: -0.1278,
         location: "London",
         rotated: true
+    }
+}
+```
+
+### Custom Color Theme
+
+```javascript
+{
+    module: "MMM-SevereWeatherAlerts",
+    position: "top_right",
+    config: {
+        latitude: 51.5074,
+        longitude: -0.1278,
+        location: "London",
+        colors: {
+            today: {
+                icon: "#00aaff",
+                iconGlow: "rgba(0, 170, 255, 0.4)"
+            },
+            forecast: {
+                icon: "#00aaff",
+                tempHigh: "#ff6b6b",
+                tempLow: "#6bc5ff"
+            }
+        }
     }
 }
 ```
