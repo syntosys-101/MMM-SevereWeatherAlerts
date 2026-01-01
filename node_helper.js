@@ -404,11 +404,24 @@ module.exports = NodeHelper.create({
                 });
                 
                 res.on('end', () => {
-                    try {
-                        const json = JSON.parse(data);
-                        resolve(json);
-                    } catch (e) {
-                        reject(new Error('Failed to parse response'));
+                    // Check Content-Type to determine if response is JSON or XML
+                    const contentType = res.headers['content-type'] || '';
+                    const isXML = contentType.includes('xml') || contentType.includes('rss') || 
+                                  contentType.includes('text/xml') || contentType.includes('application/rss');
+                    
+                    if (isXML) {
+                        // Return raw XML string for RSS feeds
+                        resolve(data);
+                    } else {
+                        // Try to parse as JSON
+                        try {
+                            const json = JSON.parse(data);
+                            resolve(json);
+                        } catch (e) {
+                            // If JSON parsing fails but it's not XML, return raw data anyway
+                            // (some APIs might return plain text or other formats)
+                            resolve(data);
+                        }
                     }
                 });
             });
