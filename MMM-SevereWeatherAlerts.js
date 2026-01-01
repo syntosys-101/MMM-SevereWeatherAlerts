@@ -355,19 +355,28 @@ Module.register("MMM-SevereWeatherAlerts", {
         const alertsContainer = document.createElement("div");
         alertsContainer.className = "alerts-container";
 
-        // Filter alerts to today plus next 3 days (4 days total)
-        const now = new Date();
-        const todayStart = new Date(now);
-        todayStart.setHours(0, 0, 0, 0);
-        const threeDaysFromNow = new Date(todayStart);
-        threeDaysFromNow.setDate(todayStart.getDate() + 3);
-        threeDaysFromNow.setHours(23, 59, 59, 999);
+        // Filter alerts to only show those for forecast days (today + next 3 days)
+        // Only show alerts for days that are in the forecast
+        const forecastDates = new Set();
+        if (this.forecast && this.forecast.length > 0) {
+            // Include today and next 3 forecast days
+            const daysToShow = Math.min(4, this.forecast.length);
+            for (let i = 0; i < daysToShow; i++) {
+                const forecastDay = this.forecast[i];
+                if (forecastDay && forecastDay.date) {
+                    const dayDate = new Date(forecastDay.date);
+                    dayDate.setHours(0, 0, 0, 0);
+                    forecastDates.add(dayDate.getTime());
+                }
+            }
+        }
 
+        // Filter alerts to only those matching forecast days
         const upcomingAlerts = this.alerts.filter(alert => {
             if (!alert.start) return false;
             const alertStart = new Date(alert.start);
             alertStart.setHours(0, 0, 0, 0);
-            return alertStart >= todayStart && alertStart <= threeDaysFromNow;
+            return forecastDates.has(alertStart.getTime());
         });
 
         if (upcomingAlerts.length > 0) {
@@ -378,7 +387,7 @@ Module.register("MMM-SevereWeatherAlerts", {
         } else if (this.config.showNoAlertsMessage) {
             const noAlerts = document.createElement("div");
             noAlerts.className = "no-alerts";
-            noAlerts.innerHTML = '<i class="fa fa-check-circle"></i> No weather warnings (today + next 3 days)';
+            noAlerts.innerHTML = '<i class="fa fa-check-circle"></i> No weather warnings';
             alertsContainer.appendChild(noAlerts);
         }
 
