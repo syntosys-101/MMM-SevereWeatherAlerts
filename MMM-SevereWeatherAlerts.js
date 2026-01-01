@@ -355,15 +355,27 @@ Module.register("MMM-SevereWeatherAlerts", {
         const alertsContainer = document.createElement("div");
         alertsContainer.className = "alerts-container";
 
-        if (this.alerts.length > 0) {
-            this.alerts.forEach(alert => {
+        // Filter alerts to next 3 days
+        const now = new Date();
+        const threeDaysFromNow = new Date(now);
+        threeDaysFromNow.setDate(now.getDate() + 3);
+        threeDaysFromNow.setHours(23, 59, 59, 999);
+
+        const upcomingAlerts = this.alerts.filter(alert => {
+            if (!alert.start) return false;
+            const alertStart = new Date(alert.start);
+            return alertStart >= now && alertStart <= threeDaysFromNow;
+        });
+
+        if (upcomingAlerts.length > 0) {
+            upcomingAlerts.forEach(alert => {
                 const alertEl = this.createAlertElement(alert);
                 alertsContainer.appendChild(alertEl);
             });
         } else if (this.config.showNoAlertsMessage) {
             const noAlerts = document.createElement("div");
             noAlerts.className = "no-alerts";
-            noAlerts.innerHTML = '<i class="fa fa-check-circle"></i> No active weather warnings';
+            noAlerts.innerHTML = '<i class="fa fa-check-circle"></i> No weather warnings for the next 3 days';
             alertsContainer.appendChild(noAlerts);
         }
 
@@ -410,7 +422,16 @@ Module.register("MMM-SevereWeatherAlerts", {
 
         const title = document.createElement("span");
         title.className = "alert-title";
-        title.textContent = alert.event || alert.headline || "Weather Alert";
+        
+        // Add day label if alert has a start date
+        let titleText = alert.event || alert.headline || "Weather Alert";
+        if (alert.start) {
+            const dayLabel = this.getAlertDayLabel(alert.start);
+            if (dayLabel) {
+                titleText = dayLabel + ": " + titleText;
+            }
+        }
+        title.textContent = titleText;
         header.appendChild(title);
 
         const severity = document.createElement("span");
@@ -576,6 +597,28 @@ Module.register("MMM-SevereWeatherAlerts", {
         if (date.toDateString() === tomorrow.toDateString()) return "Tomorrow";
         
         return date.toLocaleDateString(this.config.language, { weekday: 'short' });
+    },
+
+    getAlertDayLabel: function(dateStr) {
+        if (!dateStr) return null;
+        const alertDate = new Date(dateStr);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const dayAfterTomorrow = new Date(today);
+        dayAfterTomorrow.setDate(dayAfterTomorrow.getDate() + 2);
+        
+        alertDate.setHours(0, 0, 0, 0);
+        
+        if (alertDate.getTime() === today.getTime()) return "Today";
+        if (alertDate.getTime() === tomorrow.getTime()) return "Tomorrow";
+        if (alertDate.getTime() === dayAfterTomorrow.getTime()) {
+            return dayAfterTomorrow.toLocaleDateString(this.config.language, { weekday: 'short' });
+        }
+        
+        // For alerts beyond 3 days, still show the day name
+        return alertDate.toLocaleDateString(this.config.language, { weekday: 'short' });
     },
 
     formatDate: function(dateStr) {
