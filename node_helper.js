@@ -187,7 +187,9 @@ module.exports = NodeHelper.create({
                 const itemRegex = /<item>(.*?)<\/item>/gs;
                 const items = xmlData.match(itemRegex) || [];
                 
-                items.forEach(itemXml => {
+                console.log(`RSS parsing: Found ${items.length} items in feed`);
+                
+                items.forEach((itemXml, idx) => {
                     try {
                         // Extract fields from RSS item
                         const titleMatch = itemXml.match(/<title>(.*?)<\/title>/s);
@@ -197,6 +199,8 @@ module.exports = NodeHelper.create({
                         
                         const title = titleMatch[1].trim();
                         const description = descriptionMatch ? descriptionMatch[1].trim() : '';
+                        
+                        console.log(`RSS item ${idx + 1}: "${title}"`);
                         
                         // Parse title to extract severity and event type
                         // Format: "Yellow warning of snow, ice affecting South West England"
@@ -259,6 +263,8 @@ module.exports = NodeHelper.create({
                             
                             startDate = this.parseMetOfficeDateTime(startDateNum, startMonth, startTime);
                             endDate = this.parseMetOfficeDateTime(endDateNum, endMonth, endTime);
+                            
+                            console.log(`  Parsed dates: ${startDate} to ${endDate}`);
                         } else {
                             // Try simpler date format: "Fri 02 Jan" or "2026-01-02"
                             const simpleDateRegex = /(\d{4}-\d{2}-\d{2})/g;
@@ -270,6 +276,13 @@ module.exports = NodeHelper.create({
                             } else if (dates.length === 1) {
                                 startDate = dates[0] + "T00:00:00Z";
                                 endDate = dates[0] + "T23:59:59Z";
+                            }
+                            
+                            if (startDate) {
+                                console.log(`  Parsed dates (simple): ${startDate} to ${endDate}`);
+                            } else {
+                                console.log(`  WARNING: Could not parse dates from description`);
+                                console.log(`  Description sample: ${description.substring(0, 200)}`);
                             }
                         }
                         
@@ -284,12 +297,17 @@ module.exports = NodeHelper.create({
                                 end: endDate || startDate,
                                 source: "Met Office RSS"
                             });
+                            console.log(`  ✓ Added alert: ${severity} - ${event} - ${startDate}`);
+                        } else {
+                            console.log(`  ✗ Skipped alert - missing event (${event}) or startDate (${startDate})`);
                         }
                     } catch (itemErr) {
-                        console.log("Error parsing RSS item:", itemErr.message);
+                        console.log(`  Error parsing RSS item ${idx + 1}:`, itemErr.message);
+                        console.log(itemErr.stack);
                     }
                 });
                 
+                console.log(`RSS parsing complete: ${alerts.length} alert(s) created`);
                 resolve(alerts);
             } catch (err) {
                 reject(new Error("Failed to parse RSS XML: " + err.message));

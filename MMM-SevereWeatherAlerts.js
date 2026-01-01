@@ -372,12 +372,34 @@ Module.register("MMM-SevereWeatherAlerts", {
         }
 
         // Filter alerts to only those matching forecast days
+        console.log(`Total alerts received: ${this.alerts.length}`);
+        if (this.alerts.length > 0) {
+            console.log('Alert dates:', this.alerts.map(a => ({ event: a.event, start: a.start })));
+        }
+        console.log('Forecast dates:', Array.from(forecastDates).map(ts => {
+            const d = new Date(ts);
+            return d.toISOString().split('T')[0];
+        }));
+        
         const upcomingAlerts = this.alerts.filter(alert => {
-            if (!alert.start) return false;
+            if (!alert.start) {
+                console.log(`Alert "${alert.event}" has no start date`);
+                return false;
+            }
             const alertStart = new Date(alert.start);
             alertStart.setHours(0, 0, 0, 0);
-            return forecastDates.has(alertStart.getTime());
+            const alertTimestamp = alertStart.getTime();
+            const alertDateStr = alertStart.toISOString().split('T')[0];
+            const matches = forecastDates.has(alertTimestamp);
+            
+            if (!matches) {
+                console.log(`Alert "${alert.event}" (${alertDateStr}) filtered out - not in forecast dates`);
+            }
+            
+            return matches;
         });
+        
+        console.log(`Alerts after filtering: ${upcomingAlerts.length}`);
 
         if (upcomingAlerts.length > 0) {
             upcomingAlerts.forEach(alert => {
