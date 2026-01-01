@@ -18,7 +18,95 @@ Module.register("MMM-SevereWeatherAlerts", {
         alertSound: false,          // Play sound on new alert
         metOfficeApiKey: null,      // Optional: Met Office DataHub API key for UK
         showNoAlertsMessage: true,
-        compactMode: false          // Smaller display for side panels
+        compactMode: false,         // Smaller display for side panels
+        colors: {
+            // Base colors
+            text: "#ffffff",
+            backgroundOverlay: "rgba(0, 0, 0, 0.25)",
+            border: "rgba(255, 255, 255, 0.08)",
+            
+            // Loading & Error states
+            loading: "#00ff00",
+            errorText: "#ff6b6b",
+            errorBackground: "rgba(255, 0, 0, 0.1)",
+            errorBorder: "#ff0000",
+            
+            // Today's weather section
+            today: {
+                location: "rgba(255, 255, 255, 0.5)",
+                icon: "#00ff00",
+                iconGlow: "rgba(0, 255, 0, 0.4)",
+                temperature: "#ffffff",
+                feelsLike: "rgba(255, 255, 255, 0.6)",
+                condition: "rgba(255, 255, 255, 0.85)",
+                detailText: "rgba(255, 255, 255, 0.6)",
+                detailIcon: "#00ff00",
+                detailIconOpacity: 0.8,
+                detailSuperscript: "rgba(255, 255, 255, 0.5)"
+            },
+            
+            // No alerts message
+            noAlerts: {
+                text: "#00ff00",
+                background: "rgba(0, 255, 0, 0.05)",
+                border: "rgba(0, 255, 0, 0.15)"
+            },
+            
+            // Alert severity colors
+            alerts: {
+                red: {
+                    backgroundStart: "rgba(180, 0, 0, 0.9)",
+                    backgroundEnd: "rgba(100, 0, 0, 0.85)",
+                    border: "#ff0000",
+                    shadowOuter: "rgba(255, 0, 0, 0.3)",
+                    shadowInner: "rgba(255, 0, 0, 0.1)",
+                    shadowOuterAnimated: "rgba(255, 0, 0, 0.5)",
+                    shadowInnerAnimated: "rgba(255, 0, 0, 0.2)",
+                    stripe1: "#ff0000",
+                    stripe2: "#000000"
+                },
+                amber: {
+                    backgroundStart: "rgba(180, 100, 0, 0.9)",
+                    backgroundEnd: "rgba(120, 60, 0, 0.85)",
+                    border: "#ff8c00",
+                    shadowOuter: "rgba(255, 140, 0, 0.2)",
+                    shadowInner: "rgba(255, 140, 0, 0.1)"
+                },
+                yellow: {
+                    backgroundStart: "rgba(180, 160, 0, 0.85)",
+                    backgroundEnd: "rgba(100, 90, 0, 0.8)",
+                    border: "#ffd700",
+                    shadowOuter: "rgba(255, 215, 0, 0.2)",
+                    shadowInner: "rgba(255, 215, 0, 0.1)"
+                },
+                badgeBackground: "rgba(0, 0, 0, 0.3)",
+                descriptionBorder: "rgba(255, 255, 255, 0.3)"
+            },
+            
+            // Forecast section
+            forecast: {
+                title: "rgba(255, 255, 255, 0.5)",
+                dayBackground: "rgba(255, 255, 255, 0.03)",
+                dayHover: "rgba(255, 255, 255, 0.08)",
+                dayName: "rgba(255, 255, 255, 0.85)",
+                icon: "#00ff00",
+                iconGlow: "rgba(0, 255, 0, 0.3)",
+                warningIcon: "#ff8c00",
+                warningIconGlow: "rgba(255, 140, 0, 0.4)",
+                warningBorder: "rgba(255, 140, 0, 0.4)",
+                warningBackground: "rgba(255, 140, 0, 0.08)",
+                condition: "rgba(255, 255, 255, 0.6)",
+                tempHigh: "#ff6b6b",
+                tempLow: "#6bc5ff",
+                precipitation: "#6bc5ff"
+            },
+            
+            // Scrollbar
+            scrollbar: {
+                track: "rgba(0, 0, 0, 0.2)",
+                thumb: "rgba(0, 255, 0, 0.3)"
+            }
+        }
     },
 
     getStyles: function() {
@@ -74,6 +162,95 @@ Module.register("MMM-SevereWeatherAlerts", {
         }
     },
 
+    applyColors: function(wrapper) {
+        // MagicMirror merges user config with defaults, so this.config.colors will have all defaults
+        // plus any user overrides. We can safely access all properties.
+        const colors = this.config.colors;
+        const style = wrapper.style;
+        
+        // Base colors
+        style.setProperty('--color-text', colors.text);
+        style.setProperty('--color-background-overlay', colors.backgroundOverlay);
+        style.setProperty('--color-border', colors.border);
+        
+        // Loading & Error states
+        style.setProperty('--color-loading', colors.loading);
+        style.setProperty('--color-error-text', colors.errorText);
+        style.setProperty('--color-error-background', colors.errorBackground);
+        style.setProperty('--color-error-border', colors.errorBorder);
+        
+        // Today's weather section
+        const today = colors.today || {};
+        style.setProperty('--color-today-location', today.location);
+        style.setProperty('--color-today-icon', today.icon);
+        style.setProperty('--color-today-icon-glow', today.iconGlow);
+        style.setProperty('--color-today-temperature', today.temperature);
+        style.setProperty('--color-today-feels-like', today.feelsLike);
+        style.setProperty('--color-today-condition', today.condition);
+        style.setProperty('--color-today-detail-text', today.detailText);
+        style.setProperty('--color-today-detail-icon', today.detailIcon);
+        style.setProperty('--color-today-detail-icon-opacity', today.detailIconOpacity);
+        style.setProperty('--color-today-detail-superscript', today.detailSuperscript);
+        
+        // No alerts state
+        const noAlerts = colors.noAlerts || {};
+        style.setProperty('--color-no-alerts-text', noAlerts.text);
+        style.setProperty('--color-no-alerts-background', noAlerts.background);
+        style.setProperty('--color-no-alerts-border', noAlerts.border);
+        
+        // Alert severity colors
+        const alerts = colors.alerts || {};
+        const red = alerts.red || {};
+        style.setProperty('--color-alert-red-background-start', red.backgroundStart);
+        style.setProperty('--color-alert-red-background-end', red.backgroundEnd);
+        style.setProperty('--color-alert-red-border', red.border);
+        style.setProperty('--color-alert-red-shadow-outer', red.shadowOuter);
+        style.setProperty('--color-alert-red-shadow-inner', red.shadowInner);
+        style.setProperty('--color-alert-red-shadow-outer-animated', red.shadowOuterAnimated);
+        style.setProperty('--color-alert-red-shadow-inner-animated', red.shadowInnerAnimated);
+        style.setProperty('--color-alert-red-stripe1', red.stripe1);
+        style.setProperty('--color-alert-red-stripe2', red.stripe2);
+        
+        const amber = alerts.amber || {};
+        style.setProperty('--color-alert-amber-background-start', amber.backgroundStart);
+        style.setProperty('--color-alert-amber-background-end', amber.backgroundEnd);
+        style.setProperty('--color-alert-amber-border', amber.border);
+        style.setProperty('--color-alert-amber-shadow-outer', amber.shadowOuter);
+        style.setProperty('--color-alert-amber-shadow-inner', amber.shadowInner);
+        
+        const yellow = alerts.yellow || {};
+        style.setProperty('--color-alert-yellow-background-start', yellow.backgroundStart);
+        style.setProperty('--color-alert-yellow-background-end', yellow.backgroundEnd);
+        style.setProperty('--color-alert-yellow-border', yellow.border);
+        style.setProperty('--color-alert-yellow-shadow-outer', yellow.shadowOuter);
+        style.setProperty('--color-alert-yellow-shadow-inner', yellow.shadowInner);
+        
+        style.setProperty('--color-alert-badge-background', alerts.badgeBackground);
+        style.setProperty('--color-alert-description-border', alerts.descriptionBorder);
+        
+        // Forecast section
+        const forecast = colors.forecast || {};
+        style.setProperty('--color-forecast-title', forecast.title);
+        style.setProperty('--color-forecast-day-background', forecast.dayBackground);
+        style.setProperty('--color-forecast-day-hover', forecast.dayHover);
+        style.setProperty('--color-forecast-day-name', forecast.dayName);
+        style.setProperty('--color-forecast-icon', forecast.icon);
+        style.setProperty('--color-forecast-icon-glow', forecast.iconGlow);
+        style.setProperty('--color-forecast-warning-icon', forecast.warningIcon);
+        style.setProperty('--color-forecast-warning-icon-glow', forecast.warningIconGlow);
+        style.setProperty('--color-forecast-warning-border', forecast.warningBorder);
+        style.setProperty('--color-forecast-warning-background', forecast.warningBackground);
+        style.setProperty('--color-forecast-condition', forecast.condition);
+        style.setProperty('--color-forecast-temp-high', forecast.tempHigh);
+        style.setProperty('--color-forecast-temp-low', forecast.tempLow);
+        style.setProperty('--color-forecast-precipitation', forecast.precipitation);
+        
+        // Scrollbar
+        const scrollbar = colors.scrollbar || {};
+        style.setProperty('--color-scrollbar-track', scrollbar.track);
+        style.setProperty('--color-scrollbar-thumb', scrollbar.thumb);
+    },
+
     getDom: function() {
         const wrapper = document.createElement("div");
         wrapper.className = "mmm-severe-weather-alerts" + (this.config.compactMode ? " compact" : "");
@@ -81,6 +258,9 @@ Module.register("MMM-SevereWeatherAlerts", {
         if (this.config.rotated) {
             wrapper.classList.add("rotated");
         }
+        
+        // Apply color configuration
+        this.applyColors(wrapper);
 
         if (!this.loaded) {
             wrapper.innerHTML = '<div class="loading"><i class="fa fa-spinner fa-pulse"></i> Loading weather data...</div>';
