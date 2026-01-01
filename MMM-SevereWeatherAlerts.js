@@ -468,19 +468,7 @@ Module.register("MMM-SevereWeatherAlerts", {
         title.textContent = titleText;
         header.appendChild(title);
 
-        const severity = document.createElement("span");
-        severity.className = "alert-severity";
-        severity.textContent = alert.severity || "Warning";
-        header.appendChild(severity);
-
         alertEl.appendChild(header);
-
-        if (alert.description) {
-            const desc = document.createElement("div");
-            desc.className = "alert-description";
-            desc.textContent = this.truncateText(alert.description, 200);
-            alertEl.appendChild(desc);
-        }
 
         const meta = document.createElement("div");
         meta.className = "alert-meta";

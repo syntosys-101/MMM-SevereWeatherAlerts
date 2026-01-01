@@ -189,7 +189,8 @@
     align-items: center;
     gap: 10px;
     margin-bottom: 8px;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    min-width: 0;
 }
 
 .mmm-severe-weather-alerts .alert-header .fa {
@@ -203,6 +204,9 @@
     text-transform: uppercase;
     letter-spacing: 0.5px;
     flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .mmm-severe-weather-alerts .alert-severity {
